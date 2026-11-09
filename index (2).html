@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hit-Duell – Die Musik-Zeitleiste</title>
+<style>
+:root{--bg:#120a24;--p:#1e1338;--p2:#2a1c4d;--ac:#ff3d9a;--ac2:#27e1c1;--tx:#f4f0ff;--mu:#a99fc9;--ok:#2ecc71;--bad:#ff5252}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(circle at 20% 0%,#2b1458 0,#120a24 55%) fixed;color:var(--tx);min-height:100vh}
+h1{margin:0;font-size:2rem;letter-spacing:.5px}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.panel{background:var(--p);border:1px solid #3a2a66;border-radius:18px;padding:18px;margin-bottom:14px}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:11px 18px;background:var(--p2);color:var(--tx);font-weight:600;transition:.15s}
+button:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.pri{background:linear-gradient(135deg,var(--ac),#ff7a3d);color:#fff}
+.sec{background:linear-gradient(135deg,#17b8a0,#27e1c1);color:#06251f}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=text],input[type=number],textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid #4a3a7e;background:#150d2b;color:var(--tx);font:inherit}
+input:focus,textarea:focus{outline:2px solid var(--ac2)}
+.modes button{flex:1;padding:16px;font-size:1.05rem;border:2px solid transparent}
+.modes button.on{border-color:var(--ac2);background:#233a46}
+.names{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin:12px 0}
+.mu{color:var(--mu);font-size:.9rem}
+#score{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.pl{flex:1;min-width:140px;background:var(--p);border:2px solid #3a2a66;border-radius:14px;padding:10px 12px}
+.pl.act{border-color:var(--ac2);box-shadow:0 0 18px #27e1c155}
+.pl b{display:block;font-size:1.05rem}
+.chips{letter-spacing:3px}
+.bar{height:6px;background:#2d2150;border-radius:5px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2))}
+.player{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#playBtn{width:74px;height:74px;border-radius:50%;font-size:1.8rem;padding:0}
+.prog{flex:1;min-width:150px;height:10px;background:#2d2150;border-radius:6px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--ac),var(--ac2))}
+.tl{display:flex;align-items:stretch;overflow-x:auto;padding:12px 4px 16px;gap:2px}
+.slot{display:flex;align-items:center;flex:0 0 auto}
+.sl{width:38px;min-height:110px;padding:0;font-size:1.4rem;background:#241a43;border:2px dashed #5a47a0;color:var(--ac2)}
+.sl.sel{background:var(--ac);color:#fff;border-style:solid;border-color:#fff;width:46px}
+.ghost{width:92px;min-height:110px;border:2px dashed var(--ac);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.7rem;margin:0 4px;background:#3a1c4a;text-align:center}
+.ghost small{font-size:.7rem;color:#ffd0e8;padding:0 4px;word-break:break-word}
+.card{flex:0 0 140px;min-height:110px;border-radius:12px;padding:10px;background:linear-gradient(160deg,hsl(var(--c) 65% 40%),hsl(var(--c) 65% 24%));display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 4px 10px #0006}
+.card .yr{font-size:1.6rem;font-weight:800}
+.card .tt{font-weight:700;font-size:.85rem;line-height:1.15}
+.card .ar{font-size:.78rem;opacity:.85}
+.card.new{outline:3px solid var(--ac2);animation:pop .6s}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.guess{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+@media(max-width:600px){.guess{grid-template-columns:1fr}.card{flex-basis:120px}}
+.rev{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.rev img{width:150px;height:150px;border-radius:14px;object-fit:cover;background:#2d2150}
+.rev .big{font-size:2.4rem;font-weight:800;color:var(--ac2)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;background:#3a2a66;font-size:.8rem;margin-top:4px}
+.log{margin:10px 0;padding:0;list-style:none}
+.log li{padding:6px 10px;margin:4px 0;border-radius:8px;background:#241a43}
+.spin{width:44px;height:44px;border:5px solid #3a2a66;border-top-color:var(--ac2);border-radius:50%;animation:sp 1s linear infinite;margin:14px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+#win{position:fixed;inset:0;z-index:40;background:#0c0618ee;overflow:auto;text-align:center;padding:24px}
+#win[hidden]{display:none}
+.trophy{font-size:7rem;animation:bounce 1.2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-22px) rotate(6deg)}}
+.winname{font-size:2.6rem;font-weight:900;background:linear-gradient(90deg,#ff3d9a,#ffd23d,#27e1c1,#ff3d9a);background-size:300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rb 3s linear infinite}
+@keyframes rb{to{background-position:300%}}
+.gift{font-size:1.2rem;padding:16px 28px}
+</style>
+</head>
+<body>
+<audio id="au" preload="auto"></audio>
+<canvas id="fx"></canvas>
+<div class="wrap">
+  <div style="margin:6px 0 14px"><h1>🎵 Hit-Duell</h1><div class="mu">Ordne die Songs in der Zeitleiste – wer zuerst die Karten richtig hat, gewinnt.</div></div>
+
+  <section id="setup">
+    <div class="panel">
+      <h3 style="margin-top:0">Spielmodus</h3>
+      <div class="row modes">
+        <button id="mSolo" class="on" onclick="setMode('solo')">👤 Einzelspiel<br><small class="mu">Jeder für sich</small></button>
+        <button id="mTeam" onclick="setMode('team')">👥 Team-Modus<br><small class="mu">Mehrere Teams</small></button>
+      </div>
+      <h3 id="namesTitle">Spieler</h3>
+      <div class="names" id="names"></div>
+      <div class="row">
+        <button onclick="addP()">＋ Hinzufügen</button>
+        <button onclick="remP()">－ Entfernen</button>
+        <span class="mu" style="margin-left:auto">Karten zum Sieg:</span>
+        <input type="number" id="goal" value="10" min="3" max="30" style="width:80px">
+      </div>
+    </div>
+    <div class="panel">
+      <b>Regeln in Kurzform</b>
+      <ul class="mu" style="margin:8px 0 0;padding-left:20px;line-height:1.5">
+        <li>Jedes Team startet mit 1 Gratis-Karte und <b>3 Chips</b>. Wer zuerst <b>10 Karten</b> richtig platziert, gewinnt.</li>
+        <li>Song abspielen, Karte in die Zeitleiste einsortieren. Optional Titel &amp; Künstler tippen: <b>beides richtig = +1 Chip</b> (max. 5).</li>
+        <li><b>Anfechten:</b> Ein anderes Team kann 1 Chip einsetzen und die Karte woanders in <i>deiner</i> Zeitleiste platzieren. Liegt der Spieler falsch und der Anfechter richtig, wird die Karte geklaut (Chip bleibt). Sonst verliert der Anfechter den Chip.</li>
+        <li>Toleranz: Titel ab 90&nbsp;% Übereinstimmung, bei Künstlern reicht ein Name (z.&nbsp;B. bei Features).</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <details><summary class="mu" style="cursor:pointer">➕ Eigene Songs zum Katalog hinzufügen (optional)</summary>
+        <p class="mu">Ein Song pro Zeile: <code>Jahr|Künstler1; Künstler2|Titel</code>. Mit einer Zeile <code>## US</code>, <code>## LAT</code>, <code>## FR</code>, <code>## DE</code>, <code>## GOS</code>, <code>## AFR</code>, <code>## BRA</code> oder <code>## MIX</code> davor wählst du das Genre. Wird im Browser gespeichert.</p>
+        <textarea id="extra" rows="6" placeholder="## DE&#10;2019|Apache 207|Roller"></textarea>
+        <div class="row" style="margin-top:8px"><button onclick="saveExtra()">Speichern</button><span class="mu" id="catInfo"></span></div>
+      </details>
+    </div>
+    <button class="pri" style="width:100%;font-size:1.2rem;padding:16px" onclick="startGame()">▶ Spiel starten</button>
+  </section>
+
+  <section id="game" hidden>
+    <div id="score"></div>
+    <div id="board" class="panel"></div>
+    <div class="row"><button onclick="if(confirm('Spiel wirklich beenden?'))toMenu()">⟲ Zum Menü</button><span class="mu" id="genreInfo"></span></div>
+  </section>
+</div>
+
+<div id="win" hidden></div>
+
+<script>
+/* ---------- KATALOG ---------- */
+const G={
+ US:{n:'Hip-Hop / R&B (USA)',w:20,h:265},
+ LAT:{n:'Latino',w:10,h:20},
+ FR:{n:'Französisch',w:10,h:215},
+ DE:{n:'Deutsch / Deutschrap',w:10,h:45},
+ GOS:{n:'Gospel',w:10,h:50},
+ AFR:{n:'Afrobeats',w:10,h:130},
+ BRA:{n:'Brazil Phonk / Funk',w:10,h:150},
+ MIX:{n:'Pop / Rock / Dance',w:20,h:300}
+};
+const CATALOG=`
+## US
+1980|Kurtis Blow|The Breaks
+1982|Grandmaster Flash & The Furious Five|The Message
+1983|Michael Jackson|Billie Jean
+1983|Michael Jackson|Beat It
+1984|Prince & The Revolution|When Doves Cry
+1985|Whitney Houston|How Will I Know
+1986|Run-DMC; Aerosmith|Walk This Way
+1986|Run-DMC|My Adidas
+1986|Beastie Boys|(You Gotta) Fight for Your Right (To Party!)
+1987|Eric B. & Rakim|Paid in Full
+1987|Salt-N-Pepa|Push It
+1987|Whitney Houston|I Wanna Dance with Somebody (Who Loves Me)
+1988|N.W.A.|Straight Outta Compton
+1988|DJ Jazzy Jeff & The Fresh Prince|Parents Just Don't Understand
+1988|Public Enemy|Bring the Noise
+1989|Public Enemy|Fight the Power
+1989|De La Soul|Me Myself and I
+1989|Tone Loc|Wild Thing
+1989|Young MC|Bust a Move
+1990|MC Hammer|U Can't Touch This
+1990|Vanilla Ice|Ice Ice Baby
+1991|A Tribe Called Quest|Can I Kick It?
+1991|Naughty by Nature|O.P.P.
+1992|Dr. Dre; Snoop Dogg|Nuthin' but a "G" Thang
+1992|Sir Mix-a-Lot|Baby Got Back
+1992|House of Pain|Jump Around
+1992|Whitney Houston|I Will Always Love You
+1992|Boyz II Men|End of the Road
+1993|Cypress Hill|Insane in the Brain
+1993|Dr. Dre; Snoop Dogg|Let Me Ride
+1994|The Notorious B.I.G.|Juicy
+1994|Nas|N.Y. State of Mind
+1994|Warren G; Nate Dogg|Regulate
+1994|Snoop Doggy Dogg|Gin and Juice
+1994|Wu-Tang Clan|C.R.E.A.M.
+1994|Coolio|Fantastic Voyage
+1994|Mariah Carey|All I Want for Christmas Is You
+1995|2Pac; Dr. Dre|California Love
+1995|2Pac|Dear Mama
+1995|Coolio; L.V.|Gangsta's Paradise
+1995|Mobb Deep|Shook Ones, Pt. II
+1995|TLC|Waterfalls
+1996|2Pac|Hit 'Em Up
+1996|Fugees|Killing Me Softly with His Song
+1996|Fugees|Ready or Not
+1996|Whitney Houston|I Believe in You and Me
+1997|The Notorious B.I.G.|Hypnotize
+1997|The Notorious B.I.G.; Puff Daddy; Mase|Mo Money Mo Problems
+1997|Puff Daddy; Faith Evans; 112|I'll Be Missing You
+1997|Missy Elliott|The Rain (Supa Dupa Fly)
+1998|DMX|Ruff Ryders' Anthem
+1998|Jay-Z|Hard Knock Life (Ghetto Anthem)
+1998|Lauryn Hill|Doo Wop (That Thing)
+1999|Eminem|My Name Is
+1999|Dr. Dre; Snoop Dogg|Still D.R.E.
+1999|DMX|Party Up (Up in Here)
+1999|TLC|No Scrubs
+1999|Destiny's Child|Bills, Bills, Bills
+2000|Eminem|The Real Slim Shady
+2000|Eminem; Dido|Stan
+2000|Outkast|Ms. Jackson
+2000|Aaliyah|Try Again
+2000|Ludacris|What's Your Fantasy
+2001|Jay-Z|Izzo (H.O.V.A.)
+2001|Missy Elliott|Get Ur Freak On
+2001|Alicia Keys|Fallin'
+2001|Eve; Gwen Stefani|Let Me Blow Ya Mind
+2002|Nelly|Hot in Herre
+2002|Eminem|Lose Yourself
+2002|Eminem|Without Me
+2002|Nelly; Kelly Rowland|Dilemma
+2002|Missy Elliott|Work It
+2003|50 Cent|In da Club
+2003|50 Cent|P.I.M.P.
+2003|Outkast|Hey Ya!
+2003|Beyoncé; Jay-Z|Crazy in Love
+2003|Ludacris; Shawnna|Stand Up
+2004|Kanye West|Jesus Walks
+2004|Usher; Lil Jon; Ludacris|Yeah!
+2004|Snoop Dogg; Pharrell Williams|Drop It Like It's Hot
+2004|Terror Squad|Lean Back
+2004|Usher|Burn
+2005|Kanye West; Jamie Foxx|Gold Digger
+2005|Mariah Carey|We Belong Together
+2005|50 Cent; Olivia|Candy Shop
+2005|Rihanna|Pon de Replay
+2006|T.I.|What You Know
+2006|Chamillionaire; Krayzie Bone|Ridin'
+2006|Ne-Yo|So Sick
+2007|Rihanna; Jay-Z|Umbrella
+2007|Soulja Boy|Crank That (Soulja Boy)
+2007|Kanye West|Stronger
+2007|Flo Rida; T-Pain|Low
+2008|Lil Wayne; Static Major|Lollipop
+2008|T.I.; Rihanna|Live Your Life
+2008|Beyoncé|Single Ladies (Put a Ring on It)
+2008|Rihanna|Disturbia
+2009|Jay-Z; Alicia Keys|Empire State of Mind
+2009|Drake|Best I Ever Had
+2010|Kanye West|Power
+2010|Eminem; Rihanna|Love the Way You Lie
+2010|B.o.B; Hayley Williams|Airplanes
+2011|Nicki Minaj|Super Bass
+2011|Drake; Rihanna|Take Care
+2012|Kendrick Lamar|Swimming Pools (Drank)
+2012|Macklemore & Ryan Lewis; Wanz|Thrift Shop
+2012|Frank Ocean|Thinkin Bout You
+2012|Rihanna|Diamonds
+2013|Drake|Hold On, We're Going Home
+2013|Beyoncé; Jay-Z|Drunk in Love
+2013|Childish Gambino|3005
+2013|Jay-Z|Holy Grail
+2014|Iggy Azalea; Charli XCX|Fancy
+2014|Nicki Minaj|Anaconda
+2014|Future|Move That Dope
+2015|Kendrick Lamar|Alright
+2015|Drake|Hotline Bling
+2015|Fetty Wap|Trap Queen
+2015|The Weeknd|Can't Feel My Face
+2016|Drake; WizKid; Kyla|One Dance
+2016|Rae Sremmurd; Gucci Mane|Black Beatles
+2016|Desiigner|Panda
+2016|Kanye West|Famous
+2016|Chance the Rapper|No Problem
+2016|Beyoncé|Formation
+2017|Kendrick Lamar|HUMBLE.
+2017|Migos; Lil Uzi Vert|Bad and Boujee
+2017|Cardi B|Bodak Yellow
+2017|Post Malone; 21 Savage|rockstar
+2017|Lil Uzi Vert|XO Tour Llif3
+2017|SZA|The Weekend
+2017|Bruno Mars|That's What I Like
+2018|Drake|God's Plan
+2018|Travis Scott|SICKO MODE
+2018|Cardi B; Bad Bunny; J Balvin|I Like It
+2018|Post Malone|Better Now
+2018|Childish Gambino|This Is America
+2018|XXXTENTACION|SAD!
+2018|Juice WRLD|Lucid Dreams
+2018|Post Malone; Swae Lee|Sunflower
+2019|Lil Nas X; Billy Ray Cyrus|Old Town Road
+2019|Megan Thee Stallion; Nicki Minaj; Ty Dolla $ign|Hot Girl Summer
+2019|DaBaby|Suge
+2019|Roddy Ricch|The Box
+2019|The Weeknd|Blinding Lights
+2019|Kanye West|Follow God
+2020|Cardi B; Megan Thee Stallion|WAP
+2020|Pop Smoke|Dior
+2020|Jack Harlow|Whats Poppin
+2020|Doja Cat|Say So
+2020|The Weeknd|Save Your Tears
+2021|Doja Cat; SZA|Kiss Me More
+2021|Lil Nas X|MONTERO (Call Me By Your Name)
+2021|Silk Sonic|Leave the Door Open
+2022|Kendrick Lamar|N95
+2022|Beyoncé|Break My Soul
+2022|Drake; 21 Savage|Jimmy Cooks
+2022|GloRilla|F.N.F. (Let's Go)
+2022|Lizzo|About Damn Time
+2022|SZA|Kill Bill
+2022|Metro Boomin; The Weeknd; 21 Savage|Creepin'
+2023|Doja Cat|Paint the Town Red
+2023|Travis Scott; Playboi Carti|FE!N
+2023|Ice Spice; Nicki Minaj|Princess Diana
+2023|Sexyy Red|Pound Town
+2024|Kendrick Lamar|Not Like Us
+2024|Beyoncé|Texas Hold 'Em
+2025|Kendrick Lamar; SZA|luther
+
+## LAT
+1985|Gloria Estefan; Miami Sound Machine|Conga
+1987|Los Lobos|La Bamba
+1992|Selena|Como la Flor
+1994|Selena|Bidi Bidi Bom Bom
+1995|Enrique Iglesias|Si Tú Te Vas
+1996|Los del Río|Macarena
+1998|Ricky Martin|La Copa de la Vida
+1999|Ricky Martin|Livin' la Vida Loca
+1999|Enrique Iglesias|Bailamos
+1999|Santana; Rob Thomas|Smooth
+1999|Marc Anthony|I Need to Know
+2001|Shakira|Whenever, Wherever
+2002|Aventura|Obsesión
+2004|Daddy Yankee|Gasolina
+2005|Juanes|La Camisa Negra
+2006|Shakira; Wyclef Jean|Hips Don't Lie
+2010|Shakira|Waka Waka (This Time for Africa)
+2010|Don Omar; Lucenzo|Danza Kuduro
+2013|Marc Anthony|Vivir Mi Vida
+2014|Shakira; Rihanna|Can't Remember to Forget You
+2015|Maluma|Borró Cassette
+2016|Shakira; Maluma|Chantaje
+2016|CNCO|Reggaetón Lento (Bailemos)
+2016|Nicky Jam|El Perdón
+2017|Luis Fonsi; Daddy Yankee|Despacito
+2017|J Balvin; Willy William|Mi Gente
+2017|Maluma|Felices los 4
+2017|Ozuna|Dile Que Tu Me Quieres
+2017|Becky G|Mayores
+2018|Bad Bunny; Drake|MIA
+2018|Rosalía|Malamente
+2018|Daddy Yankee|Dura
+2018|Ozuna|Baila Baila Baila
+2018|Maluma|Corazón
+2019|Karol G; Anuel AA|Secreto
+2019|Rosalía; J Balvin|Con Altura
+2019|Daddy Yankee; Snow|Con Calma
+2019|Bad Bunny|Callaita
+2020|Bad Bunny; Jhay Cortez|Dákiti
+2020|Bad Bunny|Yo Perreo Sola
+2020|Karol G|Bichota
+2020|Maluma|Hawái
+2021|Rauw Alejandro|Todo de Ti
+2022|Bad Bunny|Me Porto Bonito
+2022|Bad Bunny|Tití Me Preguntó
+2022|Karol G|Provenza
+2022|Rosalía|Despechá
+2022|Shakira; Bizarrap|Shakira: Bzrp Music Sessions, Vol. 53
+2023|Karol G; Shakira|TQG
+2023|Peso Pluma; Eslabon Armado|Ella Baila Sola
+2023|Feid|Normal
+2024|Karol G|Si Antes Te Hubiera Conocido
+2025|Bad Bunny|DtMF
+2025|Bad Bunny|NUEVAYoL
+
+## FR
+1982|Indochine|L'Aventurier
+1984|Les Rita Mitsouko|Marcia Baïla
+1985|Daniel Balavoine|Sauver l'amour
+1986|Mylène Farmer|Libertine
+1987|Mylène Farmer|Sans contrefaçon
+1987|Vanessa Paradis|Joe le taxi
+1987|Jean-Jacques Goldman; Sirima|Là-bas
+1989|Kaoma|Lambada
+1990|Jean-Jacques Goldman|Né en 17 à Leidenstadt
+1991|Mylène Farmer|Désenchantée
+1991|MC Solaar|Bouge de là
+1993|IAM|Je danse le mia
+1995|NTM|Qu'est-ce qu'on attend
+1995|Céline Dion|Pour que tu m'aimes encore
+1997|Daft Punk|Around the World
+2000|Daft Punk|One More Time
+2002|Sniper|Gravé dans la roche
+2002|Carla Bruni|Quelqu'un m'a dit
+2003|Corneille|Parce qu'on vient de loin
+2005|Bob Sinclar; Gary Pine|Love Generation
+2006|Diam's|La boulette (Part. 1)
+2007|Justice|D.A.N.C.E.
+2007|David Guetta; Chris Willis|Love Is Gone
+2009|Phoenix|1901
+2010|Stromae|Alors on danse
+2010|Zaz|Je veux
+2011|David Guetta; Sia|Titanium
+2013|Stromae|Papaoutai
+2013|Stromae|Formidable
+2013|Stromae|Tous les mêmes
+2013|Daft Punk; Pharrell Williams; Nile Rodgers|Get Lucky
+2013|Indila|Dernière danse
+2014|Louane|Avenir
+2014|Kendji Girac|Andalouse
+2015|Maître Gims|Bella
+2015|Petit Biscuit|Sunset Lover
+2016|Kungs; Cookin' on 3 Burners|This Girl
+2016|MHD|Afro Trap Part. 3 (Champions League)
+2017|Orelsan|Basique
+2017|Niska|Réseaux
+2018|Aya Nakamura|Djadja
+2018|Angèle|La Loi de Murphy
+2018|Lomepal|Trop beau
+2019|Angèle; Roméo Elvis|Tout oublier
+2019|Ninho|Goutte d'eau
+2019|PNL|Au DD
+2020|Aya Nakamura|Pookie
+2021|Soolking; Ouassima|Suavemente
+2022|Stromae|L'enfer
+2022|Stromae|Santé
+
+## DE
+1981|Falco|Der Kommissar
+1982|Nena|Nur geträumt
+1982|Trio|Da Da Da
+1982|Peter Schilling|Major Tom (Völlig losgelöst)
+1983|Nena|99 Luftballons
+1984|Herbert Grönemeyer|Männer
+1984|Alphaville|Big in Japan
+1984|Alphaville|Forever Young
+1984|Modern Talking|You're My Heart, You're My Soul
+1985|Falco|Rock Me Amadeus
+1985|Münchener Freiheit|Ohne dich (schlaf' ich heut' Nacht nicht ein)
+1988|Die Ärzte|Westerland
+1988|Die Toten Hosen|Hier kommt Alex
+1990|Scorpions|Wind of Change
+1992|Die Fantastischen Vier|Die da!?!
+1994|Scooter|Hyper Hyper
+1995|Fettes Brot|Jein
+1997|Rammstein|Du hast
+1997|Sash!|Ecuador
+1998|Absolute Beginner|Liebes Lied
+1998|Scooter|How Much Is the Fish?
+1998|Die Ärzte|Männer sind Schweine
+1999|Die Fantastischen Vier|MfG
+1999|Lou Bega|Mambo No. 5 (A Little Bit of...)
+2000|DJ Ötzi|Hey Baby
+2001|Samy Deluxe|Weck mich auf
+2001|Seeed|Dickes B
+2001|Rammstein|Sonne
+2001|Afrob; Ferris MC|Reimemonster
+2002|Herbert Grönemeyer|Mensch
+2004|Sido|Mein Block
+2004|Bushido|Electro Ghetto
+2004|Silbermond|Symphonie
+2004|Rammstein|Amerika
+2005|Fler|NDW 2005
+2005|Tokio Hotel|Durch den Monsun
+2005|Xavier Naidoo|Dieser Weg
+2006|Sportfreunde Stiller|'54, '74, '90, 2006
+2007|Culcha Candela|Hamma!
+2008|Peter Fox|Alles neu
+2008|Peter Fox|Schwarz zu Blau
+2008|Peter Fox|Haus am See
+2010|Lena|Satellite
+2010|Sido; Andreas Bourani|Astronaut
+2011|Cro|Easy
+2012|Cro|Einmal um die Welt
+2012|Marteria; Yasha; Miss Platnum|Lila Wolken
+2012|Kraftklub|Ich will nicht nach Berlin
+2013|Haftbefehl|Chabos wissen wer der Babo ist
+2013|Shindy|Dreh den Swag auf
+2013|Helene Fischer|Atemlos durch die Nacht
+2013|Marteria|Kids (2 Finger an den Kopf)
+2014|Kollegah|Du bist Boss
+2014|Andreas Bourani|Auf uns
+2015|Bonez MC; RAF Camora|Palmen aus Plastik
+2015|Namika|Lieblingsmensch
+2015|Sarah Connor|Wie schön du bist
+2016|Max Giesinger|80 Millionen
+2016|Wincent Weiss|Feuerwerk
+2016|AnnenMayKantereit|Pocahontas
+2017|Bausa|Was du Liebe nennst
+2018|Capital Bra; Samra|Cherry Lady
+2018|Capital Bra|Neymar
+2018|Loredana|Kein Wort
+2019|Capital Bra; Samra|Berlin lebt
+2019|Shirin David|Gib ihm
+2019|Apache 207|Roller
+2019|Apache 207|Wieso tust du dir das an?
+2019|Rammstein|Deutschland
+
+## GOS
+1980|The Clark Sisters|Is My Living in Vain
+1983|The Clark Sisters|You Brought the Sunshine
+1988|Take 6|Spread Love
+1988|Shirley Caesar|Hold My Mule
+1996|Donnie McClurkin|Stand
+1997|Kirk Franklin; God's Property|Stomp
+1999|Yolanda Adams|Open My Heart
+1999|CeCe Winans|Alabaster Box
+2000|Mary Mary|Shackles (Praise You)
+2000|Donnie McClurkin|We Fall Down
+2002|Smokie Norful|I Need You Now
+2004|Chris Tomlin|How Great Is Our God
+2005|Israel Houghton|Friend of God
+2007|Marvin Sapp|Never Would Have Made It
+2013|Tasha Cobbs Leonard; Kierra Sheard|Break Every Chain
+2013|Hillsong United|Oceans (Where Feet May Fail)
+2016|Travis Greene|Made a Way
+2016|Travis Greene|Intentional
+2016|Hillsong Worship|What a Beautiful Name
+2016|Elevation Worship|O Come to the Altar
+2017|Tasha Cobbs Leonard; Nicki Minaj|I'm Getting Ready
+2017|Todd Dulaney|Victory Belongs to Jesus
+2017|Elevation Worship|Do It Again
+2018|Cory Asbury|Reckless Love
+2018|Lauren Daigle|You Say
+2018|Jonathan McReynolds; Mali Music|Not Lucky, I'm Loved
+2019|Anthony Brown & group therAPy|Worth
+2019|Bethel Music; Jenn Johnson|Goodness of God
+2019|Kirk Franklin|Just for Me
+2020|Elevation Worship; Chandler Moore|Graves into Gardens
+2020|Maverick City Music; Kirk Franklin; Lauren Daigle|Promises
+2020|Brandon Lake|Gratitude
+2021|Elevation Worship; Maverick City Music|Jireh
+2021|CeCe Winans|Believe for It
+
+## AFR
+1988|Yvonne Chaka Chaka|Umqombothi
+1994|Youssou N'Dour; Neneh Cherry|7 Seconds
+2002|Magic System|Premier Gaou
+2004|2Face Idibia|African Queen
+2012|D'banj|Oliver Twist
+2014|Wizkid|Ojuelegba
+2014|Yemi Alade|Johnny
+2015|Davido|Dami Duro
+2017|Davido|If
+2017|Davido|Fall
+2017|Wizkid; Drake; Kyla|One Dance
+2018|Burna Boy|Ye
+2018|Burna Boy|On the Low
+2018|Davido|Assurance
+2019|Master KG; Nomcebo Zikode|Jerusalema
+2019|CKay|Love Nwantiti
+2019|Rema|Dumebi
+2019|Wizkid|Joro
+2019|Joeboy|Baby
+2020|Wizkid; Tems|Essence
+2020|Wizkid; H.E.R.|Smile
+2020|Tems|Free Mind
+2020|Fireboy DML|Jealous
+2021|Burna Boy|City Boys
+2021|Oxlade|KU LO SA
+2021|Fireboy DML|Peru
+2021|Black Sherif|Second Sermon
+2022|Rema|Calm Down
+2022|Burna Boy|Last Last
+2022|Ayra Starr|Rush
+2022|Asake|Terminator
+2022|Asake|Peace Be Unto You (PBUY)
+2022|Asake|Organise
+2022|Libianca|People
+2022|Davido|Unavailable
+2023|Tyla|Water
+2023|Davido|Feel
+2024|Tyla|Chanel
+
+## BRA
+2013|Anitta|Show das Poderosas
+2016|MC Kevinho|Olha a Explosão
+2016|Alok; Bruno Martini|Hear Me Now
+2017|Anitta; J Balvin|Downtown
+2017|Anitta|Vai Malandra
+2017|MC Fioti|Bum Bum Tam Tam
+2017|Pabllo Vittar; Major Lazer|Sua Cara
+2017|Pabllo Vittar|K.O.
+2021|Anitta; Cardi B; Myke Towers|Me Gusta
+2021|Anitta|Envolver
+2021|INTERWORLD|METAMORPHOSIS
+2021|DVRST|Close Eyes
+2021|ATLXS|PASSO BEM SOLTO
+2022|Kordhell|Murder In My Mind
+2022|Kordhell|Live Another Day
+2022|Hensonn|Sahara
+2022|MoonDeity|NEON BLADE
+
+## MIX
+1980|Queen|Another One Bites the Dust
+1980|Blondie|Call Me
+1980|ABBA|The Winner Takes It All
+1981|Queen; David Bowie|Under Pressure
+1982|Survivor|Eye of the Tiger
+1982|Toto|Africa
+1983|Eurythmics|Sweet Dreams (Are Made of This)
+1983|The Police|Every Breath You Take
+1983|Culture Club|Karma Chameleon
+1983|Cyndi Lauper|Girls Just Want to Have Fun
+1984|Wham!|Wake Me Up Before You Go-Go
+1984|Madonna|Like a Virgin
+1984|Van Halen|Jump
+1985|a-ha|Take On Me
+1985|Dire Straits|Money for Nothing
+1985|Tears for Fears|Everybody Wants to Rule the World
+1986|Bon Jovi|Livin' on a Prayer
+1986|Europe|The Final Countdown
+1986|Madonna|Papa Don't Preach
+1987|Rick Astley|Never Gonna Give You Up
+1987|U2|With or Without You
+1987|Guns N' Roses|Sweet Child o' Mine
+1987|George Michael|Faith
+1988|Bobby McFerrin|Don't Worry, Be Happy
+1988|Roxette|The Look
+1989|Madonna|Like a Prayer
+1990|Sinéad O'Connor|Nothing Compares 2 U
+1990|Depeche Mode|Enjoy the Silence
+1991|Nirvana|Smells Like Teen Spirit
+1991|R.E.M.|Losing My Religion
+1991|Bryan Adams|(Everything I Do) I Do It for You
+1992|Eric Clapton|Tears in Heaven
+1992|Snap!|Rhythm Is a Dancer
+1993|Haddaway|What Is Love
+1993|Meat Loaf|I'd Do Anything for Love (But I Won't Do That)
+1995|Oasis|Wonderwall
+1995|Alanis Morissette|You Oughta Know
+1995|Faithless|Insomnia
+1996|Spice Girls|Wannabe
+1997|Aqua|Barbie Girl
+1997|The Verve|Bitter Sweet Symphony
+1997|Celine Dion|My Heart Will Go On
+1998|Britney Spears|...Baby One More Time
+1998|Cher|Believe
+1999|Eiffel 65|Blue (Da Ba Dee)
+1999|Backstreet Boys|I Want It That Way
+2000|Coldplay|Yellow
+2001|Linkin Park|In the End
+2001|Shaggy; Rayvon|It Wasn't Me
+2002|Avril Lavigne|Complicated
+2003|Evanescence|Bring Me to Life
+2003|The White Stripes|Seven Nation Army
+2004|Green Day|Boulevard of Broken Dreams
+2004|Maroon 5|This Love
+2004|The Killers|Mr. Brightside
+2005|Gorillaz|Feel Good Inc.
+2006|Gnarls Barkley|Crazy
+2006|Justin Timberlake|SexyBack
+2006|Amy Winehouse|Rehab
+2008|Coldplay|Viva la Vida
+2008|Katy Perry|I Kissed a Girl
+2008|Lady Gaga|Just Dance
+2008|Lady Gaga|Poker Face
+2009|Black Eyed Peas|I Gotta Feeling
+2009|Kings of Leon|Use Somebody
+2010|Katy Perry|California Gurls
+2011|Adele|Rolling in the Deep
+2011|Adele|Someone Like You
+2011|LMFAO|Party Rock Anthem
+2011|Gotye; Kimbra|Somebody That I Used to Know
+2012|Carly Rae Jepsen|Call Me Maybe
+2012|Ed Sheeran|The A Team
+2012|Imagine Dragons|Radioactive
+2012|PSY|Gangnam Style
+2013|Avicii|Wake Me Up
+2013|Lorde|Royals
+2013|Miley Cyrus|Wrecking Ball
+2013|Pharrell Williams|Happy
+2014|Sam Smith|Stay with Me
+2014|Taylor Swift|Shake It Off
+2014|Ed Sheeran|Thinking Out Loud
+2014|Mark Ronson; Bruno Mars|Uptown Funk
+2015|Adele|Hello
+2015|Justin Bieber|Sorry
+2016|Twenty One Pilots|Stressed Out
+2016|Lukas Graham|7 Years
+2017|Ed Sheeran|Shape of You
+2017|Dua Lipa|New Rules
+2017|Harry Styles|Sign of the Times
+2018|Ariana Grande|thank u, next
+2019|Billie Eilish|bad guy
+2019|Lewis Capaldi|Someone You Loved
+2019|Dua Lipa|Don't Start Now
+2020|Harry Styles|Watermelon Sugar
+2020|Dua Lipa|Levitating
+2020|BTS|Dynamite
+2021|Olivia Rodrigo|drivers license
+2021|Adele|Easy on Me
+2021|Måneskin|I Wanna Be Your Slave
+2022|Harry Styles|As It Was
+2022|Taylor Swift|Anti-Hero
+2023|Miley Cyrus|Flowers
+2024|Sabrina Carpenter|Espresso
+2024|Billie Eilish|BIRDS OF A FEATHER
+2024|Chappell Roan|Good Luck, Babe!
+2024|Lady Gaga; Bruno Mars|Die with a Smile
+`;
+function parseCat(txt){const out=[];let g='MIX';txt.split('\n').forEach(l=>{l=l.trim();if(!l||l.startsWith('//'))return;if(l.startsWith('##')){const k=l.slice(2).trim().toUpperCase();if(G[k])g=k;return;}const p=l.split('|');if(p.length<3)return;const y=+p[0];if(!(y>=1980&&y<=2100))return;out.push({g,y,a:p[1].split(';').map(s=>s.trim()).filter(Boolean),t:p.slice(2).join('|').trim()});});return out;}
+let SONGS=[];
+function loadCat(){let ex='';try{ex=localStorage.getItem('hd_extra')||''}catch(e){}SONGS=parseCat(CATALOG).concat(parseCat(ex));const e=document.getElementById('extra');if(e&&ex)e.value=ex;document.getElementById('catInfo').textContent='Katalog: '+SONGS.length+' Songs';}
+function saveExtra(){try{localStorage.setItem('hd_extra',document.getElementById('extra').value)}catch(e){}loadCat();}
+
+/* ---------- Hilfsfunktionen ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function nz(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ß/g,'ss').replace(/&/g,' and ');}
+function titleN(s){return nz(String(s).replace(/\(.*?\)|\[.*?\]/g,' ').replace(/\s-\s.*$/,'')).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();}
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,i)=>i);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c;}return p[n];}
+function ratio(a,b){if(!a&&!b)return 1;return 1-lev(a,b)/Math.max(a.length,b.length);}
+function titleOK(guess,t){const g=titleN(guess);if(g.length<2)return false;const r=titleN(t);const strip=x=>x.replace(/^(the|der|die|das|a|el|la|le|les)\s+/,'');return ratio(g,r)>=.9||ratio(strip(g),strip(r))>=.9;}
+function artistOK(guess,arts){const parts=nz(guess).split(/,|;|\/|\+|&|\band\b|\bfeat\.?\b|\bft\.?\b|\bx\b|\bund\b/).map(s=>s.replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()).filter(s=>s.length>=2);if(!parts.length)return false;
+ const whole=nz(guess).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+ return arts.some(a=>{const an=nz(a).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').replace(/^the /,'').trim();return [whole,...parts].some(p=>{p=p.replace(/^the /,'');return ratio(p,an)>=.8||(p.length>=4&&an.includes(p))||(an.length>=4&&p===an);});});}
+function isValid(cards,slot,y){const n=cards.length;return (slot===0||cards[slot-1].y<=y)&&(slot===n||y<=cards[slot].y);}
+function sortedInsert(cards,s){let i=0;while(i<cards.length&&cards[i].y<=s.y)i++;cards.splice(i,0,s);return i;}
+
+/* ---------- iTunes Vorschau ---------- */
+const pcache={};
+function jsonp(url){return new Promise(res=>{const cb='cb'+Math.random().toString(36).slice(2);const s=document.createElement('script');let done=false;const fin=v=>{if(done)return;done=true;clearTimeout(t);delete window[cb];s.remove();res(v)};const t=setTimeout(()=>fin([]),9000);window[cb]=d=>fin((d&&d.results)||[]);s.onerror=()=>fin([]);s.src=url+'&callback='+cb;document.head.appendChild(s);});}
+const BAD=['karaoke','tribute','instrumental','made famous','originally performed','in the style','cover version','8-bit','lullaby','piano version','sped up','slowed','nightcore','remix','live','acoustic','reprise','demo','unplugged','mix','edit','version'];
+function pickPreview(res,s){const st=titleN(s.t);const arts=s.a.map(a=>nz(a).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim());const stl=nz(s.t);let best=null,bs=-99;
+ res.forEach((r,idx)=>{if(!r.previewUrl||!r.trackName)return;const tn=nz(r.trackName+' '+(r.collectionName||''));
+  for(const w of BAD){if(new RegExp('\\b'+w+'\\b').test(tn)&&!new RegExp('\\b'+w+'\\b').test(stl)&&!(w==='version'&&/original|album|explicit/.test(tn)))return;}
+  const an=nz(r.artistName).replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  if(!arts.some(a=>an.includes(a)||a.includes(an)))return;
+  const sim=ratio(titleN(r.trackName),st);if(sim<.8&&!titleN(r.trackName).includes(st))return;
+  const ry=+(r.releaseDate||'0').slice(0,4);let sc=sim*10-Math.abs(ry-s.y)*.4-idx*.05;
+  if(/greatest|hits|best of|essential|collection|party|karaoke|now that|throwback|sampler|compilation/i.test(r.collectionName||''))sc-=2;
+  if(ry&&ry<s.y-1)sc-=1.5;
+  if(sc>bs){bs=sc;best=r;}});
+ return best;}
+async function findPreview(s){const key=s.a[0]+'|'+s.t;if(key in pcache)return pcache[key];
+ const term=encodeURIComponent(s.a[0]+' '+s.t.replace(/\(.*?\)/g,'').trim());
+ for(const c of ['de','us']){const res=await jsonp('https://itunes.apple.com/search?term='+term+'&media=music&entity=song&limit=25&country='+c);const b=pickPreview(res,s);if(b){pcache[key]=b;return b;}}
+ pcache[key]=null;return null;}
+
+/* ---------- Spielzustand ---------- */
+let mode='solo',names=['Spieler 1','Spieler 2'],S=null,used=new Set(),lastG=[];
+const au=$('au');
+function defNames(){return mode==='solo'?['Spieler 1','Spieler 2']:['Team A','Team B'];}
+function renderNames(){$('namesTitle').textContent=mode==='solo'?'Spieler':'Teams';$('names').innerHTML=names.map((n,i)=>`<input type="text" value="${esc(n)}" maxlength="20" oninput="names[${i}]=this.value" placeholder="${mode==='solo'?'Spieler':'Team'} ${i+1}">`).join('');}
+function setMode(m){mode=m;$('mSolo').classList.toggle('on',m==='solo');$('mTeam').classList.toggle('on',m==='team');names=defNames();renderNames();}
+function addP(){if(names.length>=8)return;const base=mode==='solo'?'Spieler ':'Team ';names.push(base+(mode==='solo'?names.length+1:String.fromCharCode(65+names.length)));renderNames();}
+function remP(){if(names.length<=2)return;names.pop();renderNames();}
+
+function pickGenre(){const avail=Object.keys(G).filter(k=>SONGS.some(s=>s.g===k));let cand=avail.filter(k=>!(lastG.length>=2&&lastG[0]===k&&lastG[1]===k));if(!cand.length)cand=avail;const tot=cand.reduce((a,k)=>a+G[k].w,0);let r=Math.random()*tot;for(const k of cand){r-=G[k].w;if(r<=0)return k;}return cand[0];}
+function pickSong(){const g=pickGenre();let pool=SONGS.filter(s=>s.g===g&&!used.has(s));if(!pool.length){SONGS.filter(s=>s.g===g).forEach(s=>used.delete(s));pool=SONGS.filter(s=>s.g===g);}const s=pool[Math.floor(Math.random()*pool.length)];used.add(s);return s;}
+
+function startGame(){
+  const goal=Math.max(3,Math.min(30,+$('goal').value||10));
+  const cleaned=names.map((n,i)=>(n||'').trim()||((mode==='solo'?'Spieler ':'Team ')+(i+1)));
+  S={goal,players:cleaned.map(n=>({name:n,cards:[],chips:3,score:0})),cur:0,phase:'loading',song:null,slot:null,gt:'',ga:'',chal:[],pick:null,log:[],newCard:null,winner:null};
+  used=new Set();lastG=[];
+  S.players.forEach(p=>{let s;do{s=pickSong();}while(false);p.cards.push(s);});
+  $('setup').hidden=true;$('game').hidden=false;$('win').hidden=true;
+  newTurn();
+}
+function toMenu(){au.pause();stopFx();$('win').hidden=true;$('game').hidden=true;$('setup').hidden=false;}
+const cur=()=>S.players[S.cur];
+
+async function newTurn(){
+  S.phase='loading';S.slot=null;S.gt='';S.ga='';S.chal=[];S.pick=null;S.log=[];S.newCard=null;S.song=null;au.pause();au.removeAttribute('src');render();
+  let tries=0;
+  while(tries<14){
+    const s=pickSong();tries++;$('loadMsg')&&($('loadMsg').textContent='Suche Song… ('+tries+')');
+    const p=await findPreview(s);
+    if(p){S.song=Object.assign({},s,{prev:p});lastG.unshift(s.g);lastG.length=Math.min(lastG.length,2);au.src=p.previewUrl;au.load();S.phase='listen';render();au.play().catch(()=>{});return;}
+  }
+  S.phase='error';render();
+}
+
+function render(){
+  // Scoreboard
+  $('score').innerHTML=S.players.map((p,i)=>`<div class="pl ${i===S.cur?'act':''}"><b>${esc(p.name)}</b><span class="chips" title="Chips">${'🪙'.repeat(p.chips)||'<span class="mu">keine Chips</span>'}</span><div class="mu">${p.score} / ${S.goal} Karten</div><div class="bar"><i style="width:${Math.min(100,p.score/S.goal*100)}%"></i></div></div>`).join('');
+  const b=$('board'),p=cur();let h='';
+  const head=`<h2 style="margin:0 0 10px">🎤 ${esc(p.name)} ist dran</h2>`;
+  if(S.phase==='loading'){h=head+`<div class="spin"></div><div class="mu" style="text-align:center" id="loadMsg">Suche Song…</div>`;}
+  else if(S.phase==='error'){h=head+`<p>Es konnte keine Song-Vorschau geladen werden. Prüfe deine Internetverbindung.</p><button class="pri" onclick="newTurn()">Nochmal versuchen</button>`;}
+  else if(S.phase==='listen'){
+    h=head+playerHTML()+`<div class="guess"><div><label class="mu">Titel (optional, für 🪙)</label><input type="text" id="gt" value="${esc(S.gt)}" oninput="S.gt=this.value" autocomplete="off"></div><div><label class="mu">Künstler (optional, für 🪙)</label><input type="text" id="ga" value="${esc(S.ga)}" oninput="S.ga=this.value" autocomplete="off"></div></div>
+    <div class="mu">Wähle in deiner Zeitleiste die Stelle, an die der Song gehört (älteste Songs links):</div>`+tlHTML(p.cards,{click:'selSlot',sel:S.slot})+
+    `<button class="pri" ${S.slot===null?'disabled':''} onclick="place()">✔ Karte hier platzieren</button>`;
+  }
+  else if(S.phase==='challenge'){
+    const ghosts=[{slot:S.slot,label:p.name}].concat(S.chal.map(c=>({slot:c.slot,label:S.players[c.p].name})));
+    h=head+playerHTML()+`<p>Karte platziert! Andere Teams können jetzt <b>anfechten</b> (1 🪙 Einsatz), wenn sie denken, dass die Stelle falsch ist.</p>`+tlHTML(p.cards,{ghosts})+
+    `<div class="row" style="margin:8px 0">`+S.players.map((q,i)=>i===S.cur?'':`<button class="sec" ${(q.chips<1||S.chal.some(c=>c.p===i)||S.chal.length>=S.players.length-1&&false)?'disabled':''} onclick="startChallenge(${i})">⚔ ${esc(q.name)} ficht an${S.chal.some(c=>c.p===i)?' ✓':''}</button>`).join('')+`</div>
+    <button class="pri" onclick="reveal()">🔎 Aufdecken</button>`;
+  }
+  else if(S.phase==='pick'){
+    const q=S.players[S.pick];const taken=[S.slot].concat(S.chal.map(c=>c.slot));
+    const ghosts=[{slot:S.slot,label:p.name}].concat(S.chal.map(c=>({slot:c.slot,label:S.players[c.p].name})));
+    h=`<h2 style="margin:0 0 10px">⚔ ${esc(q.name)} ficht an</h2><p>Setze die Karte an eine <b>andere</b> Stelle in der Zeitleiste von <b>${esc(p.name)}</b>:</p>`+tlHTML(p.cards,{ghosts,click:'selChal',sel:S.slot2===undefined?null:S.slot2,dis:taken})+
+    `<div class="row"><button class="pri" ${S.slot2==null?'disabled':''} onclick="confirmChal()">✔ Anfechtung bestätigen</button><button onclick="S.phase='challenge';S.slot2=null;render()">Abbrechen</button></div>`;
+  }
+  else if(S.phase==='reveal'){
+    const s=S.song;const art=(s.prev.artworkUrl100||'').replace('100x100','300x300');
+    h=head.replace('ist dran','– Auflösung')+`<div class="rev"><img src="${esc(art)}" alt=""><div><div class="big">${s.y}</div><div style="font-size:1.4rem;font-weight:800">${esc(s.t)}</div><div>${esc(s.a.join(', '))}</div><span class="badge">${G[s.g].n}</span></div></div>
+    <ul class="log">${S.log.map(l=>`<li>${l}</li>`).join('')}</ul>`+tlHTML(p.cards,{hl:S.newCard})+
+    `<button class="pri" onclick="nextTurn()">${S.winner!==null?'🏆 Zur Siegerehrung':'▶ Nächster Zug'}</button>`;
+  }
+  b.innerHTML=h;
+  // Audio-Button aktualisieren
+  updPlay();
+  $('genreInfo').textContent='Katalog: '+SONGS.length+' Songs';
+}
+function playerHTML(){return `<div class="player"><button id="playBtn" class="sec" onclick="togglePlay()">▶</button><div class="prog"><i id="progI"></i></div><span class="mu">30-Sek.-Vorschau</span></div>`;}
+function togglePlay(){au.paused?au.play().catch(()=>{}):au.pause();}
+function updPlay(){const b=$('playBtn');if(b)b.textContent=au.paused?(au.ended?'↻':'▶'):'⏸';}
+au.addEventListener('play',updPlay);au.addEventListener('pause',updPlay);au.addEventListener('ended',updPlay);
+au.addEventListener('timeupdate',()=>{const i=$('progI');if(i&&au.duration)i.style.width=(au.currentTime/au.duration*100)+'%';});
+
+function cardHTML(s,cls){return `<div class="card ${cls||''}" style="--c:${G[s.g].h}"><div class="yr">${s.y}</div><div><div class="tt">${esc(s.t)}</div><div class="ar">${esc(s.a.join(', '))}</div></div></div>`;}
+function tlHTML(cards,o){o=o||{};let h='<div class="tl">';const gh=o.ghosts||[],dis=o.dis||[];
+  for(let i=0;i<=cards.length;i++){
+    h+='<div class="slot">';
+    gh.filter(x=>x.slot===i).forEach(x=>h+=`<div class="ghost">❓<small>${esc(x.label)}</small></div>`);
+    if(o.click&&!dis.includes(i))h+=`<button class="sl ${o.sel===i?'sel':''}" onclick="${o.click}(${i})">＋</button>`;
+    h+='</div>';
+    if(i<cards.length)h+=cardHTML(cards[i],o.hl&&cards[i]===o.hl?'new':'');
+  }
+  return h+'</div>';}
+function selSlot(i){S.slot=i;render();}
+function place(){if(S.slot===null)return;S.phase='challenge';render();}
+function startChallenge(i){S.pick=i;S.slot2=null;S.phase='pick';render();}
+function selChal(i){S.slot2=i;render();}
+function confirmChal(){S.chal.push({p:S.pick,slot:S.slot2});S.pick=null;S.slot2=null;S.phase='challenge';render();}
+
+function reveal(){
+  au.pause();const p=cur(),s=S.song;S.log=[];
+  const tOK=S.gt.trim()&&titleOK(S.gt,s.t),aOK=S.ga.trim()&&artistOK(S.ga,s.a);
+  S.log.push((tOK?'✅':'❌')+' Titel '+(tOK?'richtig':'nicht erraten'));
+  S.log.push((aOK?'✅':'❌')+' Künstler '+(aOK?'richtig':'nicht erraten'));
+  if(tOK&&aOK){if(p.chips<5){p.chips++;S.log.push('🪙 <b>'+esc(p.name)+'</b> bekommt einen Chip!');}else S.log.push('🪙 '+esc(p.name)+' hat schon das Maximum (5 Chips).');}
+  const ok=isValid(p.cards,S.slot,s.y);
+  const chal=S.chal;
+  if(ok){
+    p.cards.splice(S.slot,0,s);S.newCard=s;p.score++;
+    S.log.push('✅ <b>'+esc(p.name)+'</b> liegt richtig – die Karte bleibt!');
+    chal.forEach(c=>{const q=S.players[c.p];q.chips=Math.max(0,q.chips-1);S.log.push('🪙 −1 Chip für <b>'+esc(q.name)+'</b> (Anfechtung falsch)');});
+  }else{
+    S.log.push('❌ <b>'+esc(p.name)+'</b> liegt falsch.');
+    const w=chal.find(c=>isValid(p.cards,c.slot,s.y));
+    if(w){const q=S.players[w.p];sortedInsert(q.cards,s);S.newCard=s;q.score++;
+      S.log.push('⚔ <b>'+esc(q.name)+'</b> hat richtig angefochten und <b>klaut die Karte</b>! (Chip bleibt)');
+      chal.forEach(c=>{if(c!==w){const o=S.players[c.p];o.chips=Math.max(0,o.chips-1);S.log.push('🪙 −1 Chip für <b>'+esc(o.name)+'</b> (Anfechtung falsch)');}});
+    }else{
+      S.log.push('🗑 Die Karte wird abgelegt.');
+      chal.forEach(c=>{const o=S.players[c.p];o.chips=Math.max(0,o.chips-1);S.log.push('🪙 −1 Chip für <b>'+esc(o.name)+'</b> (Anfechtung falsch)');});
+    }
+  }
+  S.winner=null;
+  const ws=S.players.map((q,i)=>({q,i})).filter(x=>x.q.score>=S.goal);
+  if(ws.length){const a=ws.find(x=>x.i===S.cur);S.winner=(a||ws[0]).i;}
+  S.phase='reveal';render();
+  au.currentTime=0;au.play().catch(()=>{});
+}
+function nextTurn(){au.pause();if(S.winner!==null){showWin(S.players[S.winner]);return;}S.cur=(S.cur+1)%S.players.length;newTurn();}
+
+/* ---------- Siegerehrung ---------- */
+const cv=$('fx'),cx=cv.getContext('2d');let parts=[],run=false,iv=null;
+function fit(){cv.width=innerWidth;cv.height=innerHeight;}fit();addEventListener('resize',fit);
+function burst(x,y){const h=Math.random()*360;for(let i=0;i<80;i++){const a=Math.random()*6.283,s=1.5+Math.random()*6;parts.push({t:'f',x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:70+Math.random()*40,m:110,c:`hsl(${h+Math.random()*50},100%,60%)`});}}
+function confetti(n){for(let i=0;i<n;i++)parts.push({t:'c',x:Math.random()*cv.width,y:-20,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,l:400,m:400,c:`hsl(${Math.random()*360},90%,60%)`,r:3+Math.random()*5,a:Math.random()*6});}
+function emojiRain(n){const E=['🎤','🎶','🏆','🔥','🎧','👑','💿','🎸','🪩'];for(let i=0;i<n;i++)parts.push({t:'e',x:Math.random()*cv.width,y:-30-Math.random()*400,vx:(Math.random()-.5)*2,vy:3+Math.random()*4,l:500,m:500,e:E[Math.floor(Math.random()*E.length)],r:20+Math.random()*24});}
+function loopFx(){if(!run)return;cx.clearRect(0,0,cv.width,cv.height);
+  parts=parts.filter(p=>p.l>0&&p.y<cv.height+60);
+  parts.forEach(p=>{p.l--;p.x+=p.vx;p.y+=p.vy;
+    if(p.t==='f'){p.vy+=.06;p.vx*=.985;cx.globalAlpha=Math.max(0,p.l/p.m);cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,2.6,0,6.283);cx.fill();}
+    else if(p.t==='c'){p.a+=.15;cx.globalAlpha=1;cx.fillStyle=p.c;cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillRect(-p.r,-p.r/2,p.r*2,p.r);cx.restore();p.vx+=Math.sin(p.a)*.05;}
+    else{cx.globalAlpha=1;cx.font=p.r+'px serif';cx.fillText(p.e,p.x,p.y);}
+  });cx.globalAlpha=1;requestAnimationFrame(loopFx);}
+function startFx(){run=true;parts=[];loopFx();iv=setInterval(()=>{burst(100+Math.random()*(cv.width-200),80+Math.random()*cv.height*.45);if(Math.random()<.5)confetti(12);},650);confetti(120);}
+function stopFx(){run=false;clearInterval(iv);parts=[];cx.clearRect(0,0,cv.width,cv.height);}
+function fanfare(){try{const ac=new (window.AudioContext||window.webkitAudioContext)();const seq=[[523,.15],[659,.15],[784,.15],[1047,.35],[784,.12],[1047,.6]];let t=ac.currentTime+.05;seq.forEach(([f,d])=>{const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+d+.1);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d+.12);t+=d;});}catch(e){}}
+const TITLES=['Plattenboss','Hitster-Legende','DJ-Gott','Zeitreisender','Chart-Orakel','Ohrwurm-König','Beat-Magier','Mixtape-Meister'];
+function showWin(p){
+  S.phase='win';const w=$('win');w.hidden=false;
+  w.innerHTML=`<div class="wrap"><div class="trophy">🏆</div><div class="mu">Gewinner</div><div class="winname">${esc(p.name)}</div><p class="mu">hat als Erste(r) ${p.score} Karten richtig platziert!</p>
+  <div id="gift"><button class="pri gift" onclick="openGift()">🎁 Überraschung öffnen</button></div>
+  <h3>Die Zeitleiste von ${esc(p.name)}</h3><div style="max-width:1000px;margin:0 auto">${tlHTML(p.cards)}</div>
+  <div class="row" style="justify-content:center;margin-top:16px"><button class="pri" onclick="again()">↻ Nochmal spielen</button><button onclick="toMenu()">Zum Menü</button></div></div>`;
+  startFx();fanfare();
+}
+function openGift(){const p=S.players[S.winner];const t=TITLES[Math.floor(Math.random()*TITLES.length)];
+  $('gift').innerHTML=`<div style="font-size:4rem">🎉</div><div style="font-size:1.6rem;font-weight:800">${esc(p.name)} ist ab sofort offiziell: <span style="color:var(--ac2)">${t}</span>!</div><div class="mu">👑 Die Menge tobt – Zugabe! Zugabe! 👑</div>`;
+  fanfare();emojiRain(70);confetti(250);for(let i=0;i<14;i++)setTimeout(()=>burst(80+Math.random()*(cv.width-160),60+Math.random()*cv.height*.5),i*180);}
+function again(){stopFx();$('win').hidden=true;startGame();}
+
+renderNames();loadCat();
+</script>
+</body>
+</html>
